@@ -1,11 +1,16 @@
 import numpy as np
+import pandas as pd
+import io, base64
 import json
 import dash
 from pathlib import Path
 from dash import Dash, dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
+import plotly.io as pio
+import plotly.graph_objs as go
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from dash.dependencies import Input, Output
 from skimage import draw
 from scipy import ndimage
@@ -165,18 +170,24 @@ app.layout = html.Div(
             ],
             style={"width": "40%", "display": "inline-block", "padding": "0 0"},
         ),
-        # html.Div(
-        #     [
-        #         html.Label("PPI image"),
-        #         # dcc.Graph(id="graph-histogram", figure=fig_hist),
-        #     ],
-        #     style={"width": "40%", "display": "inline-block", "padding": "0 0"},
-        # ),
         html.Div(
             [
                 dcc.Graph(id="graph-histogram", style={"height": "70vh"}),
+                html.Br(),
+                html.Div([], style={"width": "10%"}),
             ],
             style={"width": "20%", "display": "inline-block", "padding": "0 0"},
+        ),
+        html.Div(
+            [
+                # html.Label("PPI image"),
+                html.Img(
+                    id="graph-ppi",
+                    style={"vertical-align": "text-bottom"},
+                    className="align-self-center",
+                ),
+            ],
+            style={"width": "40%", "display": "inline-block", "padding": "0 0"},
         ),
         # dcc.Store stores the intermediate value
         dcc.Store(id="bscan-image"),
@@ -267,6 +278,7 @@ def populate_lists(path, file):
 
 @app.callback(
     Output("graph-bscan", "figure"),
+    Output("graph-ppi", "src"),
     Output("bscan-image", "data"),
     Output("cur-mask-dataset", "data"),
     Output("graph-bscan", "relayoutData"),
@@ -333,7 +345,41 @@ def create_fig(path, file, qty, dataset, relayoutData, prev_mask_dataset):
     else:
         relayoutData = {}
 
-    return fig, json.dumps(arr.filled().tolist()), json.dumps(dataset), relayoutData
+    # PPI figure as static image
+    azimuth = radar.get_azimuth(0)
+    rr_los = radar.range["data"]
+
+    R, AZ = np.meshgrid(rr_los, azimuth)
+    biny = R * np.cos(np.radians(AZ))
+    binx = R * np.sin(np.radians(AZ))
+
+    fig_ppi, ax = plt.subplots(figsize=(7, 7))
+    ax.pcolormesh(binx, biny, arr.filled(), rasterized=True, norm=norm, cmap=cmap)
+    ax.set_aspect(1)
+    ax.set_xticks(
+        [
+            0,
+        ]
+    )
+    ax.set_yticks(
+        [
+            0,
+        ]
+    )
+    ax.grid(which="both")
+
+    buf = io.BytesIO()  # in-memory files
+    fig_ppi.savefig(buf, format="png")  # save to the above file object
+    plt.close()
+    data = base64.b64encode(buf.getbuffer()).decode("utf8")  # encode to html elements
+
+    return (
+        fig,
+        "data:image/png;base64,{}".format(data),
+        json.dumps(arr.filled().tolist()),
+        json.dumps(dataset),
+        relayoutData,
+    )
 
 
 @app.callback(
@@ -359,8 +405,8 @@ def write_mask_to_hdf5(n_clicks, json_mask, outpath, orig_path, filename, datase
 
     orig = h5py.File(radarpath, "r")
     new = h5py.File(outfile, "a")
-    # Copy attributes from original file
 
+    # Copy attributes from original file
     dset = new.require_group(dataset)
 
     # Copy attributes from the original file
