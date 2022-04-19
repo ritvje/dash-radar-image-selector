@@ -1,13 +1,11 @@
 import numpy as np
-import pandas as pd
 import io, base64
 import json
 import dash
 from pathlib import Path
-from dash import Dash, dcc, html, Input, Output, State
+from dash import dcc, html, Input, Output, State
 import dash_bootstrap_components as dbc
 import plotly.express as px
-import plotly.io as pio
 import plotly.graph_objs as go
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -61,7 +59,7 @@ def empty_bscan():
         np.zeros((360, 500)),
         labels=dict(
             x="Range",
-            y="Azimuth",
+            y="Ray",
         ),
         color_continuous_scale="viridis",
         zmax=0,
@@ -180,12 +178,7 @@ app.layout = html.Div(
         ),
         html.Div(
             [
-                # html.Label("PPI image"),
-                html.Img(
-                    id="graph-ppi",
-                    style={"vertical-align": "text-bottom"},
-                    className="align-self-center",
-                ),
+                dcc.Graph(id="graph-ppi", config={"doubleClick": "reset"}),
             ],
             style={"width": "40%", "display": "inline-block", "padding": "0 0"},
         ),
@@ -278,7 +271,7 @@ def populate_lists(path, file):
 
 @app.callback(
     Output("graph-bscan", "figure"),
-    Output("graph-ppi", "src"),
+    Output("graph-ppi", "figure"),
     Output("bscan-image", "data"),
     Output("cur-mask-dataset", "data"),
     Output("graph-bscan", "relayoutData"),
@@ -310,12 +303,14 @@ def create_fig(path, file, qty, dataset, relayoutData, prev_mask_dataset):
     # Create figure
     fig = px.imshow(
         arr.filled(),
+        x=radar.range["data"] * 1e-3,
+        aspect="auto",
         color_continuous_scale=palette,
         zmin=plot_utils.QTY_RANGES[qty][0],
         zmax=plot_utils.QTY_RANGES[qty][1],
         labels=dict(
-            x="Range",
-            y="Azimuth",
+            x="Range [km]",
+            y="Ray",
             color=plot_utils.COLORBAR_TITLES[qty],
         ),
     )
@@ -346,36 +341,71 @@ def create_fig(path, file, qty, dataset, relayoutData, prev_mask_dataset):
         relayoutData = {}
 
     # PPI figure as static image
-    azimuth = radar.get_azimuth(0)
-    rr_los = radar.range["data"]
-
-    R, AZ = np.meshgrid(rr_los, azimuth)
-    biny = R * np.cos(np.radians(AZ))
-    binx = R * np.sin(np.radians(AZ))
-
-    fig_ppi, ax = plt.subplots(figsize=(7, 7))
-    ax.pcolormesh(binx, biny, arr.filled(), rasterized=True, norm=norm, cmap=cmap)
-    ax.set_aspect(1)
-    ax.set_xticks(
-        [
-            0,
-        ]
+    fig_ppi = dash_utils.plot_onepanel_ppi(
+        radar,
+        qty,
+        plot_utils.PYART_FIELDS_ODIM[qty],
+        radar.range["data"].max() * 1e-3,
     )
-    ax.set_yticks(
-        [
-            0,
-        ]
-    )
-    ax.grid(which="both")
 
-    buf = io.BytesIO()  # in-memory files
-    fig_ppi.savefig(buf, format="png")  # save to the above file object
+    # in-memory files
+    buf = io.BytesIO()
+    # save to the above file object
+    fig_ppi.savefig(buf, dpi=600, format="png", bbox_inches="tight")
     plt.close()
-    data = base64.b64encode(buf.getbuffer()).decode("utf8")  # encode to html elements
+    # encode to html elements
+    data = base64.b64encode(buf.getbuffer()).decode("utf-8")
+
+    img_width = 800
+    img_height = 700
+
+    fig_ppi = go.Figure()
+    fig_ppi.add_trace(
+        go.Scatter(
+            x=[0, img_width], y=[img_height, 0], mode="markers", marker_opacity=0
+        )
+    )
+    # Add image as background
+    scale_factor = 0.2
+    fig_ppi.add_layout_image(
+        dict(
+            x=0,
+            y=0,
+            sizex=img_width * scale_factor,
+            sizey=img_height * scale_factor,
+            xref="x",
+            yref="y",
+            opacity=1.0,
+            layer="above",
+            visible=True,
+            sizing="contain",
+            source="data:image/png;base64,{}".format(data),
+        )
+    )
+    fig_ppi.update_xaxes(
+        showgrid=False,
+        range=(0, img_width * scale_factor),
+        showline=False,
+        zeroline=False,
+        visible=False,
+    )
+    fig_ppi.update_yaxes(
+        range=(img_height * scale_factor, 0),
+        showgrid=False,
+        scaleanchor="x",
+        showline=False,
+        zeroline=False,
+        visible=False,
+    )
+    fig_ppi.update_layout(
+        height=img_height,
+        width=img_width,
+        template="none",
+    )
 
     return (
         fig,
-        "data:image/png;base64,{}".format(data),
+        fig_ppi,
         json.dumps(arr.filled().tolist()),
         json.dumps(dataset),
         relayoutData,
