@@ -51,7 +51,7 @@ def path_to_mask(path, shape):
     return mask
 
 
-def empty_rhi():
+def empty_bscan():
     fig = px.imshow(
         np.zeros((360, 500)),
         labels=dict(
@@ -73,7 +73,7 @@ app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = html.Div(
     [
         html.Div(
-            [html.H2("Select pixels from RHI image", style={"textAlign": "center"})]
+            [html.H2("Select areas from radar image", style={"textAlign": "center"})]
         ),
         html.Div(
             [
@@ -157,9 +157,9 @@ app.layout = html.Div(
         html.Div(
             [
                 dcc.Graph(
-                    id="graph-rhi",
+                    id="graph-bscan",
                     config=config,
-                    figure=empty_rhi(),
+                    figure=empty_bscan(),
                     style={"height": "70vh"},
                 ),
             ],
@@ -179,8 +179,8 @@ app.layout = html.Div(
             style={"width": "20%", "display": "inline-block", "padding": "0 0"},
         ),
         # dcc.Store stores the intermediate value
-        dcc.Store(id="rhi-image"),
-        dcc.Store(id="rhi-mask"),
+        dcc.Store(id="bscan-image"),
+        dcc.Store(id="bscan-mask"),
         dcc.Store(id="cur-mask-dataset"),
     ]
 )
@@ -188,9 +188,9 @@ app.layout = html.Div(
 
 @app.callback(
     Output("graph-histogram", "figure"),
-    Output("rhi-mask", "data"),
-    Input("graph-rhi", "relayoutData"),
-    Input("rhi-image", "data"),
+    Output("bscan-mask", "data"),
+    Input("graph-bscan", "relayoutData"),
+    Input("bscan-image", "data"),
     Input("var-dropdown", "value"),
     prevent_initial_call=True,
 )
@@ -266,15 +266,15 @@ def populate_lists(path, file):
 
 
 @app.callback(
-    Output("graph-rhi", "figure"),
-    Output("rhi-image", "data"),
+    Output("graph-bscan", "figure"),
+    Output("bscan-image", "data"),
     Output("cur-mask-dataset", "data"),
-    Output("graph-rhi", "relayoutData"),
+    Output("graph-bscan", "relayoutData"),
     Input("rootpath-input", "value"),
     Input("radar-input", "value"),
     Input("var-dropdown", "value"),
     Input("elev-dropdown", "value"),
-    State("graph-rhi", "relayoutData"),
+    State("graph-bscan", "relayoutData"),
     State("cur-mask-dataset", "data"),
     prevent_initial_call=True,
 )
@@ -339,7 +339,7 @@ def create_fig(path, file, qty, dataset, relayoutData, prev_mask_dataset):
 @app.callback(
     Output("savemask-output", "children"),
     Input("savemask-button", "n_clicks"),
-    State("rhi-mask", "data"),
+    State("bscan-mask", "data"),
     State("outpath-input", "value"),
     State("rootpath-input", "value"),
     State("radar-input", "value"),
