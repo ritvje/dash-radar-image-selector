@@ -23,11 +23,7 @@ DEFAUL_OUTPUT_PATH = "."
 
 BSCAN_GRAPH_CONFIG = {
     "modeBarButtonsToAdd": [
-        "drawline",
-        "drawopenpath",
         "drawclosedpath",
-        "drawcircle",
-        "drawrect",
         "eraseshape",
     ]
 }
