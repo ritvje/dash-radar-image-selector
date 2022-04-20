@@ -24,6 +24,11 @@ from skimage import draw
 import config as cfg
 from radar_plotting import dash_utils, plot_utils
 
+# Update field names in pyart to access fields not specified in
+# original code
+# This is probably a really dirty hack, but it works!
+pyart.aux_io.odim_h5.ODIM_H5_FIELD_NAMES = plot_utils.PYART_FIELDS
+
 
 def path_to_indices(path):
     """From SVG path to numpy array of coordinates, each row being a (row, col) point"""
@@ -465,7 +470,7 @@ def create_figures(json_fullpath, qty, dataset, relayoutData, prev_mask_dataset)
         return dash.no_update
 
     fullpath = Path(json.loads(json_fullpath))
-    field_name = plot_utils.PYART_FIELDS_ODIM[qty]
+    field_name = plot_utils.PYART_FIELDS[qty]
 
     radar = pyart.aux_io.read_odim_h5(
         fullpath,
@@ -534,7 +539,7 @@ def create_ppi_figure(
         return dash.no_update
 
     fullpath = Path(json.loads(json_fullpath))
-    field_name = plot_utils.PYART_FIELDS_ODIM[qty]
+    field_name = plot_utils.PYART_FIELDS[qty]
 
     radar = pyart.aux_io.read_odim_h5(
         fullpath,
