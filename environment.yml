@@ -1,0 +1,32 @@
+name: dash
+channels:
+  - conda-forge
+dependencies:
+  - wradlib
+  - scikit-learn
+  - pillow
+  - h5py
+  - pandas
+  - xarray
+  - requests
+  - netcdf4
+  - arm_pyart>=1.11.8
+  - dask
+  - matplotlib
+  - seaborn
+  - numpy
+  - pyproj
+  - scipy
+  - ipython
+  - ca-certificates
+  - certifi
+  - openssl
+  - tqdm
+  - scikit-image
+  - dash
+  - plotly
+  - flask
+  - werkzeug
+  - itsdangerous
+  - flask-compress
+  - ipdb
