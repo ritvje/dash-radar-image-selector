@@ -578,7 +578,7 @@ def write_mask_to_hdf5(n_clicks, json_mask, outpath, json_filepath, dataset):
 
     mask = np.array(json.loads(json_mask))
 
-    radarpath = json.loads(json_filepath)
+    radarpath = Path(json.loads(json_filepath))
     outname = radarpath.stem + "_mask" + radarpath.suffix
     outfile = Path(outpath) / outname
 
