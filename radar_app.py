@@ -11,6 +11,8 @@ import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 import h5py
 import matplotlib as mpl
+
+mpl.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pyart
@@ -35,7 +37,7 @@ def path_to_indices(path):
     indices_str = [
         el.replace("M", "").replace("Z", "").split(",") for el in path.split("L")
     ]
-    return np.rint(np.array(indices_str, dtype=float)).astype(int)
+    return np.array(indices_str, dtype=float)
 
 
 def path_to_mask(path, shape):
@@ -43,13 +45,19 @@ def path_to_mask(path, shape):
     are True, and the other pixels are False.
     """
     cols, rows = path_to_indices(path).T
+    cols = cols * 1e3 / cfg.RANGE_RESOLUTION
     rr, cc = draw.polygon(rows, cols)
+
+    # Range is now values in kilometers, so convert to pixels
+    # print(cc)
+    cc = np.rint(cc).astype(int)
+    rr = np.rint(rr).astype(int)
 
     # Fix any values outside figure
     rr[rr >= shape[0]] = shape[0] - 1
     cc[cc >= shape[1]] = shape[1] - 1
 
-    mask = np.zeros(shape, dtype=np.bool)
+    mask = np.zeros(shape, dtype=bool)
     mask[rr, cc] = True
     mask = ndimage.binary_fill_holes(mask)
     return mask
@@ -240,8 +248,8 @@ app.layout = html.Div(
         html.Div(
             [
                 dcc.Graph(id="graph-histogram", style={"height": "70vh"}),
-                html.Br(),
-                html.Div([], style={"width": "10%"}),
+                # html.Br(),
+                # html.Div([], style={"width": "5%"}),
             ],
             style={"width": "20%", "display": "inline-block", "padding": "0 0"},
         ),

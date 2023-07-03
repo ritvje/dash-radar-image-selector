@@ -17,6 +17,8 @@ RADAR_OPTIONS = sorted(
     key=lambda d: d["label"],
 )
 
+RANGE_RESOLUTION = 500
+
 DEFAULT_PATH_FORMAT = "/mnt/hdf5/%Y/%m/%d/radar/polar/{radar}/"
 DEFAULT_FILE_FORMAT = "%Y%m%d%H%M_radar.polar.{radar}.h5"
 DEFAUL_OUTPUT_PATH = "."
