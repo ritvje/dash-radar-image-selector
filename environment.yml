@@ -26,7 +26,9 @@ dependencies:
   - dash
   - plotly
   - flask
-  - werkzeug
-  - itsdangerous
   - flask-compress
   - ipdb
+  - arrow
+  - dash-bootstrap-components
+  - dash-core-components
+  - dash-mantine-components==0.12.1

@@ -1,4 +1,5 @@
 """Dash app for selecting & saving masks of areas in radar scans."""
+
 import base64
 import io
 import json
@@ -34,9 +35,7 @@ pyart.aux_io.odim_h5.ODIM_H5_FIELD_NAMES = plot_utils.PYART_FIELDS
 
 def path_to_indices(path):
     """From SVG path to numpy array of coordinates, each row being a (row, col) point"""
-    indices_str = [
-        el.replace("M", "").replace("Z", "").split(",") for el in path.split("L")
-    ]
+    indices_str = [el.replace("M", "").replace("Z", "").split(",") for el in path.split("L")]
     return np.array(indices_str, dtype=float)
 
 
@@ -84,9 +83,7 @@ def empty_bscan():
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = html.Div(
     [
-        html.Div(
-            [html.H2("Select areas from radar image", style={"textAlign": "center"})]
-        ),
+        html.Div([html.H2("Select areas from radar image", style={"textAlign": "center"})]),
         # First row
         html.Div(
             [
@@ -124,10 +121,14 @@ app.layout = html.Div(
                         dmc.DatePicker(
                             id="date-input",
                             value=datetime.now().date(),
-                            maxDate=datetime.now().date(),
-                            inputFormat="DD-MM-YYYY",
+                            # maxDate=datetime.now().date(),
+                            # valueFormat="DD-MM-YYYY",
                             # label="DD-MM-YYYY",
+                            style={"height": "40px"},
                         ),
+                        # dcc.DatePickerSingle(
+                        #     id="date-input", month_format="DD-MM-YYYY", placeholder="DD-MM-YYYY", date=datetime.now()
+                        # ),
                     ],
                     style={"width": "7%"},
                 ),
@@ -136,9 +137,7 @@ app.layout = html.Div(
                     [
                         html.Label("HH:MM"),
                         html.Br(),
-                        dbc.Input(
-                            id="time-input", value="12:00", type="time", step=300
-                        ),
+                        dbc.Input(id="time-input", value="12:00", type="time", step=300),
                     ],
                     style={"width": "7%"},
                 ),
@@ -342,9 +341,7 @@ def populate_lists(json_fullpath):
 
     def get_variables(name, node):
         if name.endswith("/where") and "elangle" in node.attrs.keys():
-            elevations.append(
-                {"label": node.attrs["elangle"].item(), "value": name.split("/")[0]}
-            )
+            elevations.append({"label": node.attrs["elangle"].item(), "value": name.split("/")[0]})
 
         if name.endswith("/what") and "quantity" in node.attrs.keys():
             if node.attrs["quantity"].decode() not in qty_list:
@@ -389,6 +386,18 @@ def plot_bscan(radar, arr, palette, zmin, zmax, colorname, tickformat):
     fig.update_yaxes(automargin=True)
     fig.update_xaxes(automargin=True)
 
+    hover_data = []
+    template_str = "Range [km]: %{x}<br>Ray: %{y}<br>"
+    # Gather data for hovertemplate
+    for i, field in enumerate(radar.fields.keys()):
+        arr_ = radar.get_field(0, field)
+        arr_.set_fill_value(-99)
+        hover_data.append(arr_.filled())
+        template_str += "{field}: %{{customdata[{i}]:.2f}}<br>".format(field=plot_utils.ODIM_FROM_PYART[field], i=i)
+
+    hover_data = np.dstack(hover_data)
+    fig.update(data=[{"customdata": hover_data, "hovertemplate": template_str}])
+
     # Default annotation method
     fig.update_layout(dragmode="drawclosedpath")
     return fig
@@ -415,11 +424,7 @@ def plot_ppi(radar, qty, field_name):
     img_height = 700
 
     fig_ppi = go.Figure()
-    fig_ppi.add_trace(
-        go.Scatter(
-            x=[0, img_width], y=[img_height, 0], mode="markers", marker_opacity=0
-        )
-    )
+    fig_ppi.add_trace(go.Scatter(x=[0, img_width], y=[img_height, 0], mode="markers", marker_opacity=0))
     # Add image as background
     scale_factor = 0.2
     fig_ppi.add_layout_image(
@@ -485,18 +490,16 @@ def create_figures(json_fullpath, qty, dataset, relayoutData, prev_mask_dataset)
         include_datasets=[
             dataset,
         ],
-        include_fields=[
-            field_name,
-        ],
+        # include_fields=[
+        #     # field_name,
+        # ],
     )
 
     arr = radar.get_field(0, field_name)
     arr.set_fill_value(np.nan)
 
     cmap, norm = plot_utils.get_colormap(qty)
-    norm = mpl.colors.Normalize(
-        vmin=plot_utils.QTY_RANGES[qty][0], vmax=plot_utils.QTY_RANGES[qty][1]
-    )
+    norm = mpl.colors.Normalize(vmin=plot_utils.QTY_RANGES[qty][0], vmax=plot_utils.QTY_RANGES[qty][1])
     palette = dash_utils.cmap_to_RGB(cmap, norm)
 
     # Create Bscan figure
